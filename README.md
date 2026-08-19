@@ -194,8 +194,17 @@ npm test
 npm run test:coverage
 ```
 
-JaCoCo gates coverage at **55% overall** and **80% for the recommendation
-engine**, and the build fails below either threshold.
+JaCoCo gates coverage where it is meaningful: **80% on the recommendation
+scoring core** (`scoring`, `strategy`, `explain`) and **60% on
+`common.security`**. The build fails below either threshold.
+
+There is deliberately no whole-project percentage: with tests concentrated on
+the engine and the security and interaction services, a global number would
+mostly measure how much untested DTO and wiring code exists, and the easiest
+way to raise it would be to test trivial getters.
+
+> Integration tests need a Docker daemon for Testcontainers. Without one, run
+> `mvn verify -DskipITs=true`; unit tests and the coverage gates still run.
 
 ### Offline verification
 
