@@ -54,14 +54,14 @@ talks to a single origin and there is no CORS preflight in production.
 
 ### Without Docker
 
-Requires JDK 21, Node 20+, PostgreSQL 16.
+Requires JDK 21, Maven 3.9+, Node 20+ and PostgreSQL 16.
 
 ```bash
 createdb cinevault
 
 cd backend
 export JWT_SECRET=$(openssl rand -base64 48)
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev   # Flyway migrates + seeds
+mvn spring-boot:run -Dspring-boot.run.profiles=dev      # Flyway migrates + seeds
 
 cd ../frontend
 npm install
@@ -179,11 +179,11 @@ See [`docs/architecture.md`](docs/architecture.md).
 ## Running tests
 
 ```bash
-# Backend: unit + web-layer tests
-cd backend && ./mvnw test
+# Backend: unit + web-layer tests (no Docker required)
+cd backend && mvn test
 
-# Backend: including Testcontainers integration tests (needs Docker)
-./mvnw verify
+# Backend: adds Testcontainers integration tests and coverage gates (needs Docker)
+mvn verify
 
 # Frontend
 cd frontend

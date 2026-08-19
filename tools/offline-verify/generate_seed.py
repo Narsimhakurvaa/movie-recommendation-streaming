@@ -19,7 +19,10 @@ import random
 import re
 import unicodedata
 
-OUT = pathlib.Path("backend/src/main/resources/db/seed")
+# Anchored to the repository root, not the CWD: running this from
+# tools/offline-verify/ previously created a stray duplicate seed tree.
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+OUT = REPO_ROOT / "backend/src/main/resources/db/seed"
 random.seed(20240817)  # deterministic output
 
 
