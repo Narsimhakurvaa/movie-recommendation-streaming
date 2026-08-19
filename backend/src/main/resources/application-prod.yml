@@ -1,0 +1,26 @@
+# Production profile: strict, quiet, no seed data, no API explorer.
+spring:
+  flyway:
+    # Only real migrations; demo accounts must never reach production.
+    locations: classpath:db/migration
+    clean-disabled: true
+  jpa:
+    show-sql: false
+
+cinevault:
+  openapi:
+    # Swagger UI is a development affordance, not a production endpoint.
+    enabled: ${OPENAPI_ENABLED:false}
+  cache:
+    type: ${CACHE_TYPE:redis}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+logging:
+  level:
+    root: WARN
+    com.cinevault: INFO

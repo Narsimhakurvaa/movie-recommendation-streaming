@@ -1,0 +1,39 @@
+# Integration-test profile: real PostgreSQL via Testcontainers.
+# The datasource URL is injected at runtime by PostgresIntegrationTest.
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 25
+  flyway:
+    enabled: true
+    # Seed the catalogue too: repository tests assert against real rows, and
+    # this exercises the seed scripts on every integration run.
+    locations: classpath:db/migration,classpath:db/seed
+  sql:
+    init:
+      mode: never
+
+cinevault:
+  jwt:
+    # Test-only key, never used outside the test source set.
+    secret: aW50ZWdyYXRpb24tb25seS1zZWNyZXQta2V5LTMyLWJ5dGVzLW1pbmltdW0=
+    issuer: cinevault-integration
+    access-token-ttl: PT15M
+    refresh-token-ttl: P1D
+  cache:
+    type: memory
+  rate-limit:
+    enabled: false
+  provider:
+    type: local
+
+logging:
+  level:
+    root: WARN
+    com.cinevault: INFO
+    org.testcontainers: WARN
