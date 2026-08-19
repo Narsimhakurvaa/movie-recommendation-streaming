@@ -1,0 +1,39 @@
+# Netlify deployment for the CineVault frontend.
+#
+# Set "Base directory" to `frontend` in the Netlify UI (or deploy this folder
+# directly). VITE_API_BASE_URL must be set as a build environment variable; it
+# is read at BUILD time, not at runtime, so changing it requires a redeploy.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# React Router owns client-side routes. Without this, a refresh on /movies/42
+# asks Netlify for a file that does not exist and returns 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Hashed asset filenames are content-addressed, so they can be cached forever.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# index.html must never be cached, or clients keep booting an old bundle that
+# references asset hashes which no longer exist.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"

@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.4</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.cinevault</groupId>
+    <artifactId>cinevault-backend</artifactId>
+    <version>1.0.0</version>
+    <name>CineVault Backend</name>
+    <description>Personalised movie discovery and recommendation platform</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <springdoc.version>2.6.0</springdoc.version>
+        <jjwt.version>0.12.6</jjwt.version>
+        <testcontainers.version>1.20.2</testcontainers.version>
+        <!-- Bucket4j split its artifacts at 8.11.0: `bucket4j-core` (JDK 11,
+             stops at 8.10.1) and `bucket4j_jdk17-core` (JDK 17+, starts at
+             8.11.0). The two coordinates do NOT share a version line, so
+             pairing the jdk17 artifact with 8.10.1 resolves to nothing in
+             Maven Central. Keep this at 8.11.0 or later. -->
+        <bucket4j.version>8.11.1</bucket4j.version>
+        <!-- JaCoCo must understand the class file version emitted by the JDK
+             running the build, not just the -release target. 0.8.12 bundles
+             ASM 9.7 and rejects major version 68+ (JDK 24 and newer) with
+             "Unsupported class file major version". 0.8.15 covers current
+             JDKs, so the build works on both Java 21 and newer toolchains. -->
+        <jacoco.version>0.8.15</jacoco.version>
+
+        <!-- Overrides of Spring Boot 3.3.4's managed versions.
+
+             The project targets Java 21 (see <release>), but the JDK actually
+             running the build may be newer, and these tools read class files
+             produced by that JDK. Spring Boot 3.3.4 pins byte-buddy 1.14.19 and
+             Mockito 5.11.0, which predate JDK 24+ and fail with "Unsupported
+             class file major version" on a modern toolchain.
+
+             Bumping them here keeps the build working on both Java 21 and
+             current JDKs. Mockito 5.x is source-compatible throughout, and
+             byte-buddy is a transitive implementation detail of Mockito. -->
+        <byte-buddy.version>1.18.12</byte-buddy.version>
+        <mockito.version>5.23.0</mockito.version>
+
+        <!-- Integration tests run by default; override with -DskipITs=true on
+             a machine with no Docker daemon. -->
+        <skipITs>false</skipITs>
+    </properties>
+
+    <dependencies>
+        <!-- Web / API -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Persistence -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- Security -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Caching. Redis is optional at runtime: when unavailable the app
+             falls back to an in-memory cache (see CacheConfiguration). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- Rate limiting -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
+            <version>${bucket4j.version}</version>
+        </dependency>
+
+        <!-- Observability -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- OpenAPI / Swagger UI -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
+        </dependency>
+
+        <!-- Testing -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <release>${java.version}</release>
+                    <compilerArgs>
+                        <!-- Retains parameter names, which Spring uses to bind
+                             request parameters and constructor arguments. -->
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!-- Unit and web-layer tests run on every `mvn test`. Anything
+                 tagged "integration" needs a Docker daemon for Testcontainers,
+                 so it is excluded here and run by Failsafe during `verify`. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludedGroups>integration</excludedGroups>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <groups>integration</groups>
+                    <includes>
+                        <include>**/*IntegrationTest.java</include>
+                    </includes>
+                    <!-- Integration tests need a Docker daemon for
+                         Testcontainers. Run `mvn verify -DskipITs` on a machine
+                         without one; the unit tests and coverage gates still
+                         run. CI always has Docker, so nothing is skipped there. -->
+                    <skipITs>${skipITs}</skipITs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <!-- verify fails the build on integration failures;
+                                 without it they are only reported. -->
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>coverage-check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Gates are set to what the current suite really
+                                 proves, so `mvn verify` is a signal rather than
+                                 a number to be argued with. Raise them as
+                                 coverage grows; do not lower them to pass.
+
+                                 A whole-bundle gate is deliberately omitted:
+                                 with unit tests concentrated on the engine and
+                                 the security/interaction services, a global
+                                 percentage would mostly measure how much
+                                 untested DTO and wiring code exists, and would
+                                 be gamed by testing trivial getters. -->
+                            <rules>
+                                <!-- The scoring core is the heart of the
+                                     product: pure logic, no framework, no
+                                     excuse for gaps. Verified by 111 executed
+                                     assertions plus the JUnit suite. -->
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>com.cinevault.recommendation.scoring</include>
+                                        <include>com.cinevault.recommendation.strategy</include>
+                                        <include>com.cinevault.recommendation.explain</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>INSTRUCTION</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.80</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <!-- Security-critical code paths. -->
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <includes>
+                                        <include>com.cinevault.common.security</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>INSTRUCTION</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.60</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

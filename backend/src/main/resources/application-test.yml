@@ -1,0 +1,35 @@
+# Test profile. Integration tests that need real PostgreSQL behaviour
+# (triggers, constraints) use Testcontainers and override this.
+spring:
+  datasource:
+    url: jdbc:h2:mem:cinevault;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+
+cinevault:
+  jwt:
+    # Test-only key. Never used outside the test source set.
+    secret: dGVzdC1vbmx5LXNlY3JldC1rZXktZm9yLXVuaXQtdGVzdHMtMzJieXRlcys=
+    issuer: cinevault-test
+    access-token-ttl: PT15M
+    refresh-token-ttl: P1D
+  cache:
+    type: memory
+  rate-limit:
+    enabled: false
+  provider:
+    type: local
+
+logging:
+  level:
+    root: WARN
+    com.cinevault: INFO

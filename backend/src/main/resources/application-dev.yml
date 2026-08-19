@@ -1,0 +1,22 @@
+# Development profile: verbose diagnostics, relaxed limits.
+# Activate with SPRING_PROFILES_ACTIVE=dev
+spring:
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        # Counts queries per session so an accidental N+1 is visible in logs.
+        generate_statistics: ${HIBERNATE_STATISTICS:false}
+  flyway:
+    # Seed data is a separate location so production can exclude it entirely.
+    locations: classpath:db/migration,classpath:db/seed
+
+cinevault:
+  rate-limit:
+    # Higher ceiling so local testing is not throttled.
+    capacity: 200
+
+logging:
+  level:
+    com.cinevault: DEBUG

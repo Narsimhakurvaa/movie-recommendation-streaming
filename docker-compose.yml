@@ -1,0 +1,93 @@
+# ---------------------------------------------------------------------------
+# Local stack: PostgreSQL + backend + frontend (+ optional Redis).
+#
+#   cp .env.example .env
+#   echo "JWT_SECRET=$(openssl rand -base64 48)" >> .env
+#   docker compose up --build
+#
+# The app is served at http://localhost:3000; nginx proxies /api to the
+# backend, so the browser only ever talks to one origin and there is no CORS
+# preflight.
+#
+# Redis is OPTIONAL and therefore behind a profile. The default stack runs
+# without it using an in-process cache:
+#
+#   docker compose --profile redis up --build   # adds Redis
+#
+# ---------------------------------------------------------------------------
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-cinevault}
+      POSTGRES_USER: ${DATABASE_USERNAME:-cinevault}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-cinevault}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+    healthcheck:
+      # Without this the backend races Postgres and Flyway fails on boot.
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME:-cinevault} -d ${DATABASE_NAME:-cinevault}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["redis"]
+    # Caching is an optimisation here, never a source of truth, so an
+    # in-memory-only Redis with no persistence is the correct trade-off.
+    command: redis-server --save "" --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${DATABASE_NAME:-cinevault}
+      DATABASE_USERNAME: ${DATABASE_USERNAME:-cinevault}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-cinevault}
+      # Defaults to the in-process cache so the stack runs without Redis.
+      # Set CACHE_TYPE=redis in .env and start with --profile redis to use it.
+      CACHE_TYPE: ${CACHE_TYPE:-memory}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      # No default: the application refuses to start without a real secret.
+      JWT_SECRET: "${JWT_SECRET:?set JWT_SECRET in .env - generate with openssl rand -base64 48}"
+      MOVIE_PROVIDER: ${MOVIE_PROVIDER:-local}
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      # nginx serves the browser, so the API is reached same-origin via /api.
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      # Waits for readiness, not just process start, so the first page load
+      # does not hit a backend that is still running migrations.
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

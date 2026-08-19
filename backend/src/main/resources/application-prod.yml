@@ -1,0 +1,29 @@
+# Production profile: strict, quiet, no seed data, no API explorer.
+spring:
+  flyway:
+    # Only real migrations; demo accounts must never reach production.
+    locations: classpath:db/migration
+    clean-disabled: true
+  jpa:
+    show-sql: false
+
+cinevault:
+  openapi:
+    # Swagger UI is a development affordance, not a production endpoint.
+    enabled: ${OPENAPI_ENABLED:false}
+  cache:
+    # Defaults to in-memory so a first production deployment needs only
+    # PostgreSQL. Set CACHE_TYPE=redis (and REDIS_URL) once you run more than
+    # one instance or want the cache to survive a restart. See docs/deployment.md.
+    type: ${CACHE_TYPE:memory}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+logging:
+  level:
+    root: WARN
+    com.cinevault: INFO

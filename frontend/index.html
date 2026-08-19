@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0d14" />
+    <meta
+      name="description"
+      content="CineVault — personalised movie discovery with explainable recommendations, watchlists, ratings and reviews."
+    />
+    <title>CineVault — Discover films worth your evening</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      /*
+       * Applies the stored theme before first paint.
+       *
+       * Inline and synchronous on purpose: doing this in React would leave a
+       * visible flash of the wrong theme while the bundle loads.
+       */
+      (function () {
+        try {
+          var stored = localStorage.getItem('cinevault.theme');
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var dark = stored === 'dark' || ((!stored || stored === 'system') && prefersDark);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {
+          /* storage unavailable; fall back to the light theme */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
