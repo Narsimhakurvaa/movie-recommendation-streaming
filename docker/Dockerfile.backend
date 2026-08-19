@@ -1,0 +1,33 @@
+# ---------------------------------------------------------------------------
+# Backend image: multi-stage so the runtime layer carries no build tooling.
+# ---------------------------------------------------------------------------
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /build
+
+# Dependencies resolve in their own layer, so a source-only change does not
+# re-download the world on every rebuild.
+COPY backend/pom.xml .
+RUN mvn -B dependency:go-offline
+
+COPY backend/src ./src
+RUN mvn -B clean package -DskipTests
+
+# --- runtime ---------------------------------------------------------------
+FROM eclipse-temurin:21-jre-alpine AS runtime
+WORKDIR /app
+
+# Never run as root: a container escape should not land on uid 0.
+RUN addgroup -S cinevault && adduser -S cinevault -G cinevault
+COPY --from=build /build/target/*.jar app.jar
+RUN chown -R cinevault:cinevault /app
+USER cinevault
+
+EXPOSE 8080
+
+# Compose and Kubernetes both use this to gate traffic until Flyway finishes.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+  CMD wget -qO- http://localhost:8080/actuator/health/readiness || exit 1
+
+# Container-aware heap sizing; the JVM otherwise assumes the host's RAM.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseG1GC"
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
