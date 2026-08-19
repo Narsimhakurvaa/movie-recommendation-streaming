@@ -1,0 +1,42 @@
+# Java / Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+!tools/offline-verify/**/*.jar
+*.log
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+coverage/
+.vite/
+*.local
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Offline verification scratch
+.offline-build/
+.pgdata/
+
+# Offline verification tooling deps
+tools/offline-verify/syntax/node_modules/
+tools/offline-verify/syntax/package-lock.json
+
+# Frontend build output
+frontend/dist/
+frontend/node_modules/
+frontend/.vite/

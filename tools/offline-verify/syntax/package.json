@@ -1,0 +1,10 @@
+{
+  "name": "cinevault-syntax-check",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Offline Java syntax verification using a full Java grammar parser",
+  "type": "commonjs",
+  "dependencies": {
+    "java-parser": "^2.3.2"
+  }
+}
