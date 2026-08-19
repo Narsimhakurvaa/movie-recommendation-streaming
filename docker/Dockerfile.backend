@@ -16,6 +16,11 @@ RUN mvn -B clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine AS runtime
 WORKDIR /app
 
+# curl is not present in the JRE Alpine image and the HEALTHCHECK below needs
+# an HTTP client. wget from busybox exists but is not guaranteed across base
+# image revisions, so curl is installed explicitly.
+RUN apk add --no-cache curl
+
 # Never run as root: a container escape should not land on uid 0.
 RUN addgroup -S cinevault && adduser -S cinevault -G cinevault
 COPY --from=build /build/target/*.jar app.jar
@@ -24,9 +29,11 @@ USER cinevault
 
 EXPOSE 8080
 
-# Compose and Kubernetes both use this to gate traffic until Flyway finishes.
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD wget -qO- http://localhost:8080/actuator/health/readiness || exit 1
+# Readiness (not liveness) gates traffic: it reports DOWN while Flyway is still
+# migrating and if the database is unreachable. ${PORT:-8080} keeps the check
+# correct on hosts that inject their own port.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=90s --retries=3 \
+  CMD curl -fsS "http://localhost:${PORT:-8080}/actuator/health/readiness" || exit 1
 
 # Container-aware heap sizing; the JVM otherwise assumes the host's RAM.
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseG1GC"

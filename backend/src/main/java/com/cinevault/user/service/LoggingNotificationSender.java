@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
@@ -14,10 +15,22 @@ import org.springframework.stereotype.Component;
  * copies the link from the console and the flow completes end to end. It is not
  * a stub that pretends to succeed while doing nothing.
  *
+ * <h2>Why this is excluded from production</h2>
+ * <p>A password-reset token is a bearer credential: anyone holding it can take
+ * over the account until it expires. Writing it to the application log would
+ * copy that credential into every log aggregator, backup and support tool that
+ * ingests stdout, so this bean is restricted with {@code @Profile("!prod")}.
+ *
+ * <p>Belt and braces: {@link NotificationSenderGuard} additionally fails
+ * startup if the {@code prod} profile is active and no real sender has been
+ * supplied, so a production deployment cannot silently fall back to a channel
+ * that leaks tokens - or to no delivery at all.
+ *
  * <p>Annotated {@link ConditionalOnMissingBean} so that adding a real sender to
  * the context replaces it automatically, with no configuration change.
  */
 @Component
+@Profile("!prod")
 @ConditionalOnMissingBean(ignored = LoggingNotificationSender.class, value = NotificationSender.class)
 public class LoggingNotificationSender implements NotificationSender {
 
@@ -32,8 +45,7 @@ public class LoggingNotificationSender implements NotificationSender {
     @Override
     public void sendPasswordReset(String email, String rawToken) {
         // The token is a credential. It is printed here only because this
-        // implementation exists specifically for local development, and the
-        // class must never be active in production (see NotificationSender).
+        // implementation is confined to non-production profiles.
         log.warn("""
 
                 ------------------------------------------------------------------

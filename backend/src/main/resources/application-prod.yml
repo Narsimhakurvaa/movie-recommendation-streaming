@@ -12,7 +12,10 @@ cinevault:
     # Swagger UI is a development affordance, not a production endpoint.
     enabled: ${OPENAPI_ENABLED:false}
   cache:
-    type: ${CACHE_TYPE:redis}
+    # Defaults to in-memory so a first production deployment needs only
+    # PostgreSQL. Set CACHE_TYPE=redis (and REDIS_URL) once you run more than
+    # one instance or want the cache to survive a restart. See docs/deployment.md.
+    type: ${CACHE_TYPE:memory}
 
 management:
   endpoints:

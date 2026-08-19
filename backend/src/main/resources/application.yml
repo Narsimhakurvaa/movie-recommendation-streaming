@@ -2,6 +2,10 @@ spring:
   application:
     name: cinevault
 
+  lifecycle:
+    # Bounded drain window for in-flight requests during a rolling deploy.
+    timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:25s}
+
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/cinevault}
     username: ${DATABASE_USERNAME:cinevault}
@@ -60,7 +64,9 @@ spring:
                                  # I/O bound, so it benefits directly.
 
 server:
-  port: ${SERVER_PORT:8080}
+  # Many Java hosts (Render, Railway, Heroku, Cloud Run) inject the port to
+  # bind as $PORT. SERVER_PORT stays supported for local use and compose.
+  port: ${PORT:${SERVER_PORT:8080}}
   error:
     # Errors are rendered by GlobalExceptionHandler; never leak internals.
     include-stacktrace: never
@@ -125,6 +131,17 @@ management:
       roles: ADMIN
       probes:
         enabled: true
+      group:
+        # Liveness answers "is this process broken?". A database outage is not
+        # a reason to restart the container - restarting fixes nothing and
+        # causes a crash-loop - so the datasource is deliberately excluded.
+        liveness:
+          include: livenessState
+        # Readiness answers "can this instance serve traffic?". Without the
+        # database it cannot, so it should be pulled from the load balancer
+        # while staying alive to recover.
+        readiness:
+          include: readinessState,db
   health:
     redis:
       # Redis is optional; a missing cache must not mark the app unhealthy.

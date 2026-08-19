@@ -39,7 +39,8 @@ cp .env.example .env
 # JWT_SECRET is required and has no default:
 echo "JWT_SECRET=$(openssl rand -base64 48)" >> .env
 
-docker compose up --build
+docker compose up --build              # Postgres + backend + frontend
+# docker compose --profile redis up --build   # ... and Redis (optional)
 ```
 
 | Service | URL |
@@ -228,15 +229,22 @@ Every setting is an environment variable; see [`.env.example`](.env.example).
 | `DATABASE_USERNAME` / `DATABASE_PASSWORD` | `cinevault` | |
 | `MOVIE_PROVIDER` | `local` | `local` or `tmdb` |
 | `TMDB_API_KEY` | *empty* | Only for `tmdb`; falls back to `local` if absent |
-| `REDIS_URL` | `redis://localhost:6379` | Optional |
-| `CACHE_ENABLED` | `true` | Degrades to in-memory if Redis is down |
-| `FRONTEND_URL` | `http://localhost:5173` | CORS allowlist entry |
+| `CACHE_TYPE` | `memory` | `redis` only when running 2+ instances |
+| `REDIS_URL` | `redis://localhost:6379` | Only used when `CACHE_TYPE=redis` |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173,...` | Exact origins; never `*` |
+| `FRONTEND_URL` | `http://localhost:5173` | Base for reset/verification links |
+| `VITE_API_BASE_URL` | *(unset)* | Frontend build-time API URL; unset = same-origin `/api` |
 
 No secret has a default value. The application refuses to start without a real
 `JWT_SECRET` rather than falling back to something insecure.
 
 **Profiles:** `dev` (seeds data, Swagger on, debug logging) · `prod` (no seed, no
-Swagger, Redis required) · `test` (H2) · `integration` (Testcontainers).
+Swagger, in-memory cache by default, real mail sender required) · `test` (H2) ·
+`integration` (Testcontainers).
+
+**Redis is optional.** The default `CACHE_TYPE=memory` needs no Redis at all;
+switch to `redis` only when you run more than one instance. See
+[`docs/deployment.md`](docs/deployment.md).
 
 ## Project layout
 
@@ -277,7 +285,23 @@ runs on every push and pull request:
 | [`docs/recommendation-engine.md`](docs/recommendation-engine.md) | Algorithms, constants, worked examples |
 | [`docs/api.md`](docs/api.md) | Every endpoint, error codes, conventions |
 | [`docs/database.md`](docs/database.md) | Schema, ER diagram, constraints, indexing |
+| [`docs/deployment.md`](docs/deployment.md) | Deploying to real infrastructure, env vars, troubleshooting |
 | [`docs/verification.md`](docs/verification.md) | What was verified, how, and what was not |
+
+## Deploying
+
+The frontend and backend deploy independently:
+
+- **Frontend** → any static host. `frontend/vercel.json` and
+  `frontend/netlify.toml` are committed with SPA rewrites and cache headers.
+  Set `VITE_API_BASE_URL` at build time.
+- **Backend** → any container or JVM host (Render, Railway, Fly, ECS, a VM).
+  Not Vercel: it needs a persistent process, not a serverless function.
+- **PostgreSQL 16+**, no extensions. Flyway migrates automatically at startup.
+- **Redis** only if you scale beyond one instance.
+
+Full instructions, the complete environment-variable table, a smoke-test script
+and a troubleshooting matrix are in [`docs/deployment.md`](docs/deployment.md).
 
 ## Licence
 

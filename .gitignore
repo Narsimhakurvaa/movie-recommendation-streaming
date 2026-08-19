@@ -40,3 +40,7 @@ tools/offline-verify/syntax/package-lock.json
 frontend/dist/
 frontend/node_modules/
 frontend/.vite/
+
+# Python bytecode from the verification harness
+__pycache__/
+*.pyc
